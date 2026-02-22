@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+venv/
+.venv/
+
+# Node
+map-app/node_modules/
+map-app/dist/
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo

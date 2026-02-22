@@ -1,0 +1,86 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow: hidden;
+  background: #f3f4f6;
+}
+
+/* ── Leaflet popup overrides ──────────────────────────────────────────────── */
+.leaflet-popup-content-wrapper {
+  border-radius: 8px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14) !important;
+  padding: 0 !important;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  width: auto !important;
+  min-width: 220px;
+}
+
+.leaflet-popup-tip-container {
+  margin-top: -1px;
+}
+
+/* ── Popup inner content ──────────────────────────────────────────────────── */
+.popup-content {
+  padding: 12px 14px;
+}
+
+.popup-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.35;
+  margin-bottom: 2px;
+}
+
+.popup-address {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+
+.popup-rates {
+  width: 100%;
+  font-size: 0.75rem;
+  border-collapse: collapse;
+}
+
+.popup-rates tr + tr td {
+  padding-top: 4px;
+}
+
+.popup-rates td:first-child {
+  color: #6b7280;
+  padding-right: 14px;
+  white-space: nowrap;
+}
+
+.popup-rates td:last-child {
+  font-weight: 600;
+  color: #111827;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.popup-rates tr.active-metric td {
+  color: #2563eb;
+}
+
+.popup-source {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #f3f4f6;
+  font-size: 0.6875rem;
+  color: #9ca3af;
+  line-height: 1.35;
+}
