@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import CountyView from './CountyView'
 
 // ── Color helpers ─────────────────────────────────────────────────────────────
 
@@ -81,7 +82,10 @@ function BoundsUpdater({ facilities, selectedState }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function MapView({ facilities, colorMetric, colorRange, selectedState }) {
+export default function MapView({
+  facilities, colorMetric, colorRange, selectedState,
+  viewMode, countyData, topoData,
+}) {
   const sortedRates = colorRange
 
   return (
@@ -103,7 +107,7 @@ export default function MapView({ facilities, colorMetric, colorRange, selectedS
 
         <BoundsUpdater facilities={facilities} selectedState={selectedState} />
 
-        {facilities.map(f => {
+        {viewMode === 'facility' && facilities.map(f => {
           const rate  = getDisplayRate(f, colorMetric)
           const color = rateToColor(rate, sortedRates)
           const pct   = rate != null ? Math.round(getPercentile(rate, sortedRates)) : null
@@ -151,9 +155,19 @@ export default function MapView({ facilities, colorMetric, colorRange, selectedS
             </CircleMarker>
           )
         })}
+
+        {viewMode === 'county' && countyData.length > 0 && topoData && (
+          <CountyView
+            countyData={countyData}
+            topoData={topoData}
+            selectedState={selectedState}
+          />
+        )}
       </MapContainer>
 
-      <Legend sortedRates={sortedRates} metric={colorMetric} />
+      {viewMode === 'facility' && (
+        <Legend sortedRates={sortedRates} metric={colorMetric} />
+      )}
     </div>
   )
 }

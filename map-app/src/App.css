@@ -67,6 +67,12 @@
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
+/* ── ACO select ──────────────────────────────────────────────────────────── */
+.aco-select {
+  min-width: 180px;
+  max-width: 300px;
+}
+
 /* ── Metric toggle ────────────────────────────────────────────────────────── */
 .toggle-group {
   display: flex;
@@ -188,4 +194,26 @@
   font-size: 0.625rem;
   color: #9ca3af;
   line-height: 1.4;
+}
+
+/* ── County legend ───────────────────────────────────────────────────────── */
+.county-legend {
+  min-width: 220px;
+}
+
+.county-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.6875rem;
+  color: #374151;
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.county-legend-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  flex-shrink: 0;
 }
