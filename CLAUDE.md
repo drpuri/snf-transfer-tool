@@ -35,7 +35,7 @@ All data comes from the [CMS Provider Data Catalog](https://data.cms.gov/provide
 | MSSP ACO Beneficiary County Assignments | CMS (2024 PUF) | ACO_ID, State_ID (SSA), County_ID (SSA), Tot_AB |
 | NBER SSA-to-FIPS Crosswalk | NBER (2025) | SSA county code → FIPS county code translation |
 | ACO Participants API | CMS dataset `5be87981-…` | `aco_id` → `aco_name` lookup (476 ACOs) |
-| MSSP ACO Performance PUF (PY 2024) | CMS (Sept 2025 release) | `ACO_ID`, `Measure_479` (hospital-wide 30-day readmission rate), `QualScore` (quality score 0-100) |
+| MSSP ACO Performance PUF (PY 2024) | CMS (Sept 2025 release) | `ACO_ID`, `P_SNF_ADM` (SNF admissions per 1,000 benes), `SNF_LOS` (avg length of stay in days) |
 
 ### Rate Fields in `facilities.json`
 
@@ -56,12 +56,12 @@ All data comes from the [CMS Provider Data Catalog](https://data.cms.gov/provide
 | `facility_count` | Number of SNF facilities in the county |
 | `aco_present` | Whether any MSSP ACO operates in the county |
 | `aco_beneficiaries` | Total ACO-assigned Medicare beneficiaries in the county |
-| `acos` | Array of `{id, name, beneficiaries, readmission_rate, qual_score}` for each ACO with >0 beneficiaries |
+| `acos` | Array of `{id, name, beneficiaries, snf_adm, snf_los}` for each ACO with >0 beneficiaries |
 | `category` | Market segmentation category (see below) |
 
 Coverage (January 2026 data): 12,068 facilities total; ~11,944 with observed/adjusted rates; ~10,228 with VBP rate; 2,386 counties with SNF data; 474 unique ACOs mapped.
 
-**Note on ACO readmission_rate:** `Measure_479` is a *hospital-wide* 30-day all-cause unplanned readmission rate, not SNF-specific. It is the standard CMS quality measure for ACOs and reflects overall care coordination effectiveness. Values are stored as percentages (e.g. 16.47%). `qual_score` is the overall ACO quality score (0–100). Both may be `null` if CMS suppressed the value.
+**Note on ACO SNF metrics:** `snf_adm` is SNF admissions per 1,000 beneficiary person-years from `P_SNF_ADM`. `snf_los` is average SNF length of stay in days from `SNF_LOS`. Both come from the MSSP Performance PUF and may be `null` if CMS suppressed the value.
 
 ---
 
@@ -129,8 +129,8 @@ snf-transfer-tool/
 4. Aggregates facility rates by county FIPS (mean observed rehospitalization rate, facility count)
 5. Downloads MSSP ACO beneficiary-by-county CSV + NBER SSA-to-FIPS crosswalk to map SSA county codes → FIPS
 6. Downloads CMS ACO Participants API (paginated) to build `aco_id → aco_name` lookup
-7. Downloads MSSP ACO Performance PUF (PY 2024) to get per-ACO readmission rate (`Measure_479`) and quality score
-8. Produces per-county `acos` array with ACO name, ID, beneficiary count, readmission rate, and quality score (0-bene entries filtered out)
+7. Downloads MSSP ACO Performance PUF (PY 2024) to get per-ACO SNF admissions (`P_SNF_ADM`) and avg length of stay (`SNF_LOS`)
+8. Produces per-county `acos` array with ACO name, ID, beneficiary count, SNF admissions per 1k, and avg LOS (0-bene entries filtered out)
 9. Categorizes each county into market segment based on ACO presence + rate vs 75th percentile
 - Accepts `--output` CLI flag
 
@@ -149,7 +149,7 @@ snf-transfer-tool/
 
 **County view colors** — categorical (see segmentation table above)
 
-**County popups** — show avg rate, facility count, category, and a list of each ACO by name with readmission rate and beneficiary count
+**County popups** — show avg rate, facility count, category, and a list of each ACO by name with SNF admissions per 1k, avg LOS, and beneficiary count
 
 **ACO filter** — dropdown in header (county mode only) filters to counties where the selected ACO operates; combines with state filter
 

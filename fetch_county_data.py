@@ -261,26 +261,26 @@ def main():
             pid = str(prow.get("ACO_ID", "")).strip()
             if not pid:
                 continue
-            # Measure_479: Hospital-Wide 30-Day All-Cause Unplanned Readmission Rate
-            raw_479 = str(prow.get("Measure_479", "")).strip()
-            # QualScore: Overall quality score (0-100)
-            raw_qual = str(prow.get("QualScore", "")).strip()
-            # Handle suppressed values (*, ., empty, whitespace-only)
-            rate = None
-            if raw_479 and raw_479 not in ("*", ".", ""):
+            # P_SNF_ADM: SNF admissions per 1,000 beneficiary person-years
+            raw_snf_adm = str(prow.get("P_SNF_ADM", "")).strip()
+            # SNF_LOS: Average SNF length of stay (days)
+            raw_snf_los = str(prow.get("SNF_LOS", "")).strip()
+            # Handle suppressed values (*, ., empty, whitespace-only, nan)
+            snf_adm = None
+            if raw_snf_adm and raw_snf_adm not in ("*", ".", "", "nan"):
                 try:
-                    rate = round(float(raw_479) * 100, 2)
+                    snf_adm = round(float(raw_snf_adm), 1)
                 except (ValueError, TypeError):
                     pass
-            qual = None
-            if raw_qual and raw_qual not in ("*", ".", ""):
+            snf_los = None
+            if raw_snf_los and raw_snf_los not in ("*", ".", "", "nan"):
                 try:
-                    qual = round(float(raw_qual), 2)
+                    snf_los = round(float(raw_snf_los), 1)
                 except (ValueError, TypeError):
                     pass
-            aco_perf_lookup[pid] = {"readmission_rate": rate, "qual_score": qual}
-        perf_with_rate = sum(1 for v in aco_perf_lookup.values() if v["readmission_rate"] is not None)
-        print(f"  {len(aco_perf_lookup):,} ACOs in PUF; {perf_with_rate:,} with readmission rate.")
+            aco_perf_lookup[pid] = {"snf_adm": snf_adm, "snf_los": snf_los}
+        perf_with_data = sum(1 for v in aco_perf_lookup.values() if v["snf_adm"] is not None)
+        print(f"  {len(aco_perf_lookup):,} ACOs in PUF; {perf_with_data:,} with SNF utilization data.")
     else:
         print(f"  ACO Performance columns: {list(aco_perf.columns)}")
         print("  WARNING: Could not find ACO_ID column. Performance data will be empty.")
@@ -313,8 +313,8 @@ def main():
                 "id": aco_id,
                 "name": aco_name,
                 "beneficiaries": benes,
-                "readmission_rate": perf.get("readmission_rate"),
-                "qual_score": perf.get("qual_score"),
+                "snf_adm": perf.get("snf_adm"),
+                "snf_los": perf.get("snf_los"),
             })
 
         # Aggregate totals for backward compatibility
