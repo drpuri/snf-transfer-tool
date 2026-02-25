@@ -39,9 +39,10 @@ function onEachFeature(feature, layer, countyLookup) {
   const label = CATEGORY_LABELS[county.category] || 'N/A'
   const acos = county.acos || []
   const acoRows = acos.length > 0
-    ? acos.map(a =>
-        `<tr><td style="padding-left:12px">${a.name || a.id}</td><td>${a.beneficiaries.toLocaleString()}</td></tr>`
-      ).join('')
+    ? acos.map(a => {
+        const rate = a.readmission_rate != null ? `${a.readmission_rate.toFixed(1)}%` : '—'
+        return `<tr><td style="padding-left:12px">${a.name || a.id}</td><td>${rate}</td><td>${a.beneficiaries.toLocaleString()}</td></tr>`
+      }).join('')
     : ''
 
   layer.bindPopup(`
@@ -53,7 +54,7 @@ function onEachFeature(feature, layer, countyLookup) {
           <tr><td>SNF Facilities</td><td>${county.facility_count}</td></tr>
           <tr><td>ACO Present</td><td>${county.aco_present ? 'Yes' : 'No'}</td></tr>
           ${county.aco_present ? `<tr><td>Total ACO Beneficiaries</td><td>${county.aco_beneficiaries.toLocaleString()}</td></tr>` : ''}
-          ${acoRows ? `<tr><td colspan="2" style="font-weight:600;padding-top:6px">ACOs in County</td></tr>${acoRows}` : ''}
+          ${acoRows ? `<tr><td colspan="3" style="font-weight:600;padding-top:6px">ACOs in County</td></tr><tr style="font-size:11px;color:#6b7280"><td style="padding-left:12px">Name</td><td>Readmission</td><td>Benes</td></tr>${acoRows}` : ''}
           <tr><td>Category</td><td>${label}</td></tr>
         </tbody>
       </table>

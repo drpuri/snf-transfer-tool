@@ -59,6 +59,15 @@ ACO_PARTICIPANTS_URL = (
     "5be87981-41ad-41bc-964e-af5cbf22d5af/data"
 )
 
+# MSSP Performance Year Financial & Quality Results PUF (PY 2024)
+# Key fields: ACO_ID, Measure_479 (hospital-wide 30-day readmission rate),
+#             P_SNF_ADM (SNF admissions per 1000), QualScore (quality score 0-100)
+ACO_PERFORMANCE_URL = (
+    "https://data.cms.gov/sites/default/files/2025-09/"
+    "a355a538-5e08-46bf-a744-549f02782154/"
+    "PY%202024%20ACO%20Results%20PUF_Rerun_20250925.csv"
+)
+
 FACILITIES_JSON = Path("facilities.json")
 OUTPUT_FILE = Path("county_data.json")
 
@@ -207,7 +216,7 @@ def main():
     print(f"  {len(county_agg):,} counties with SNF data.")
 
     # ── 5. Load ACO data and merge ───────────────────────────────────────────
-    print("\n[5/6] Loading MSSP ACO county data …")
+    print("\n[5/7] Loading MSSP ACO county data …")
 
     # Download NBER SSA-to-FIPS crosswalk
     # Columns: fipscounty, ssa_code, state, countyname_fips, …
@@ -232,7 +241,7 @@ def main():
     aco.columns = aco.columns.str.strip()
 
     # ── 6. Download ACO Participants API for aco_id → aco_name lookup ───────
-    print("\n[6/6] Loading ACO Participants (name lookup) …")
+    print("\n[6/7] Loading ACO Participants (name lookup) …")
     aco_participants = download_paginated_api(ACO_PARTICIPANTS_URL, "ACO Participants")
     aco_name_lookup = {}
     for rec in aco_participants:
@@ -241,6 +250,40 @@ def main():
         if aid and aname:
             aco_name_lookup[aid] = aname
     print(f"  {len(aco_name_lookup):,} ACO ID → Name mappings built.")
+
+    # ── 7. Download ACO Performance PUF for readmission rates ──────────────
+    print("\n[7/7] Loading MSSP ACO Performance PUF …")
+    aco_perf = download_csv(ACO_PERFORMANCE_URL, "ACO Performance PUF")
+    aco_perf.columns = aco_perf.columns.str.strip()
+    aco_perf_lookup = {}
+    if "ACO_ID" in aco_perf.columns:
+        for _, prow in aco_perf.iterrows():
+            pid = str(prow.get("ACO_ID", "")).strip()
+            if not pid:
+                continue
+            # Measure_479: Hospital-Wide 30-Day All-Cause Unplanned Readmission Rate
+            raw_479 = str(prow.get("Measure_479", "")).strip()
+            # QualScore: Overall quality score (0-100)
+            raw_qual = str(prow.get("QualScore", "")).strip()
+            # Handle suppressed values (*, ., empty, whitespace-only)
+            rate = None
+            if raw_479 and raw_479 not in ("*", ".", ""):
+                try:
+                    rate = round(float(raw_479) * 100, 2)
+                except (ValueError, TypeError):
+                    pass
+            qual = None
+            if raw_qual and raw_qual not in ("*", ".", ""):
+                try:
+                    qual = round(float(raw_qual), 2)
+                except (ValueError, TypeError):
+                    pass
+            aco_perf_lookup[pid] = {"readmission_rate": rate, "qual_score": qual}
+        perf_with_rate = sum(1 for v in aco_perf_lookup.values() if v["readmission_rate"] is not None)
+        print(f"  {len(aco_perf_lookup):,} ACOs in PUF; {perf_with_rate:,} with readmission rate.")
+    else:
+        print(f"  ACO Performance columns: {list(aco_perf.columns)}")
+        print("  WARNING: Could not find ACO_ID column. Performance data will be empty.")
 
     # ── Process ACO county data ───────────────────────────────────────────
     # Build per-county ACO detail lists: {fips: [{id, name, beneficiaries}, ...]}
@@ -265,10 +308,13 @@ def main():
             aco_name = aco_name_lookup.get(aco_id, aco_id)
             if fips not in aco_details_by_county:
                 aco_details_by_county[fips] = []
+            perf = aco_perf_lookup.get(aco_id, {})
             aco_details_by_county[fips].append({
                 "id": aco_id,
                 "name": aco_name,
                 "beneficiaries": benes,
+                "readmission_rate": perf.get("readmission_rate"),
+                "qual_score": perf.get("qual_score"),
             })
 
         # Aggregate totals for backward compatibility
