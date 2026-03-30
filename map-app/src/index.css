@@ -84,3 +84,36 @@ body {
   color: #9ca3af;
   line-height: 1.35;
 }
+
+/* ── ACO section in facility popup ───────────────────────────────────────── */
+.popup-aco-header {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #e5e7eb;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+
+.popup-aco-table th {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #9ca3af;
+  text-align: left;
+  padding-bottom: 3px;
+  white-space: nowrap;
+}
+
+.popup-aco-table th:not(:first-child) {
+  text-align: right;
+}
+
+.popup-aco-name {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

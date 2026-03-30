@@ -84,7 +84,7 @@ function BoundsUpdater({ facilities, selectedState, selectedACO }) {
 
 export default function MapView({
   facilities, colorMetric, colorRange, selectedState, selectedACO,
-  viewMode, countyData, topoData,
+  viewMode, countyData, topoData, fipsToAcos,
 }) {
   const sortedRates = colorRange
 
@@ -111,6 +111,7 @@ export default function MapView({
           const rate  = getDisplayRate(f, colorMetric)
           const color = rateToColor(rate, sortedRates)
           const pct   = rate != null ? Math.round(getPercentile(rate, sortedRates)) : null
+          const acos  = f.county_fips ? (fipsToAcos[f.county_fips] || []) : []
 
           return (
             <CircleMarker
@@ -150,6 +151,30 @@ export default function MapView({
                     Color: <strong>{colorMetric === 'vbp' ? 'VBP Rate' : 'Observed Rate'}</strong>
                     {pct != null && ` · ${pct}th percentile nationally`}
                   </p>
+
+                  {acos.length > 0 && (
+                    <>
+                      <p className="popup-aco-header">ACOs in County</p>
+                      <table className="popup-rates popup-aco-table">
+                        <thead>
+                          <tr>
+                            <th>ACO</th>
+                            <th>SNF Adm/1k</th>
+                            <th>Avg LOS</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {acos.map(a => (
+                            <tr key={a.id}>
+                              <td className="popup-aco-name">{a.name}</td>
+                              <td>{a.snf_adm != null ? a.snf_adm.toFixed(1) : 'N/A'}</td>
+                              <td>{a.snf_los != null ? `${a.snf_los.toFixed(1)}d` : 'N/A'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </>
+                  )}
                 </div>
               </Popup>
             </CircleMarker>

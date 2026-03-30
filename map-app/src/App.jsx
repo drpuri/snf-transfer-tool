@@ -55,17 +55,25 @@ export default function App() {
     return ['ALL', ...[...set].sort()]
   }, [countyData])
 
-  // Map county FIPS → Set of ACO names (for facility-level ACO filtering)
-  const fipsToAcoNames = useMemo(() => {
+  // Map county FIPS → ACO details (for facility-level ACO filtering + popup display)
+  const fipsToAcos = useMemo(() => {
     const map = {}
     for (const c of countyData) {
-      if (c.acos) for (const a of c.acos) {
-        if (!map[c.fips]) map[c.fips] = new Set()
-        if (a.name) map[c.fips].add(a.name)
+      if (c.acos && c.acos.length > 0) {
+        map[c.fips] = c.acos
       }
     }
     return map
   }, [countyData])
+
+  // Map county FIPS → Set of ACO names (for filtering)
+  const fipsToAcoNames = useMemo(() => {
+    const map = {}
+    for (const [fips, acos] of Object.entries(fipsToAcos)) {
+      map[fips] = new Set(acos.map(a => a.name).filter(Boolean))
+    }
+    return map
+  }, [fipsToAcos])
 
   // County data filtered by selected ACO
   const filteredCountyData = useMemo(() => {
@@ -207,6 +215,7 @@ export default function App() {
             viewMode={viewMode}
             countyData={filteredCountyData}
             topoData={topoData}
+            fipsToAcos={fipsToAcos}
           />
       }
 
