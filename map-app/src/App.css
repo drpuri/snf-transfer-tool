@@ -217,3 +217,122 @@
   border-radius: 2px;
   flex-shrink: 0;
 }
+
+/* ── README link ─────────────────────────────────────────────────────────── */
+.readme-link {
+  font-size: 0.8125rem;
+  font-family: inherit;
+  color: #3b82f6;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+}
+
+.readme-link:hover {
+  color: #1d4ed8;
+}
+
+/* ── README modal ────────────────────────────────────────────────────────── */
+.readme-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.readme-modal {
+  position: relative;
+  background: #fff;
+  border-radius: 10px;
+  padding: 2rem 2.5rem;
+  max-width: 720px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: #1f2937;
+}
+
+.readme-modal h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 1rem;
+  color: #111827;
+}
+
+.readme-modal h3 {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  margin: 1.25rem 0 0.5rem;
+  color: #111827;
+}
+
+.readme-modal p {
+  margin: 0 0 0.5rem;
+}
+
+.readme-modal ul {
+  margin: 0 0 0.5rem;
+  padding-left: 1.25rem;
+}
+
+.readme-modal li {
+  margin-bottom: 0.25rem;
+}
+
+.readme-modal table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5rem 0;
+  font-size: 0.8125rem;
+}
+
+.readme-modal th,
+.readme-modal td {
+  text-align: left;
+  padding: 0.375rem 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.readme-modal th {
+  font-weight: 600;
+  color: #374151;
+  background: #f9fafb;
+}
+
+.readme-modal a {
+  color: #3b82f6;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.readme-modal a:hover {
+  color: #1d4ed8;
+}
+
+.readme-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #9ca3af;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0.25rem;
+}
+
+.readme-close:hover {
+  color: #374151;
+}

@@ -13,6 +13,7 @@ export default function App() {
   const [countyData, setCountyData]       = useState([])
   const [topoData, setTopoData]           = useState(null)
   const [selectedACO, setSelectedACO]     = useState('ALL')
+  const [showReadme, setShowReadme]       = useState(false)
 
   // Load facilities and county data together on startup
   useEffect(() => {
@@ -110,6 +111,7 @@ export default function App() {
     <div className="app">
       <header className="header">
         <h1 className="app-title">SNF Rehospitalization Rates</h1>
+        <button className="readme-link" onClick={() => setShowReadme(true)}>README</button>
 
         <div className="header-divider" />
 
@@ -207,6 +209,62 @@ export default function App() {
             topoData={topoData}
           />
       }
+
+      {showReadme && (
+        <div className="readme-backdrop" onClick={() => setShowReadme(false)}>
+          <div className="readme-modal" onClick={e => e.stopPropagation()}>
+            <button className="readme-close" onClick={() => setShowReadme(false)}>&times;</button>
+            <h2>Sources &amp; Methodology</h2>
+
+            <h3>Data Sources</h3>
+            <p>All data comes from the <a href="https://data.cms.gov/provider-data/" target="_blank" rel="noopener noreferrer">CMS Provider Data Catalog</a> (January 2026 release) and supporting crosswalks.</p>
+
+            <h3>Facility View</h3>
+            <table>
+              <thead><tr><th>Dataset</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><a href="https://data.cms.gov/provider-data/dataset/4pq5-n9py" target="_blank" rel="noopener noreferrer">Nursing Home Provider Info</a></td><td>Facility name, address, location coordinates</td></tr>
+                <tr><td><a href="https://data.cms.gov/provider-data/dataset/ijh5-nb2v" target="_blank" rel="noopener noreferrer">Medicare Claims Quality Measures</a></td><td>Measure 521: observed &amp; risk-adjusted rehospitalization rates (Jul 2024 &ndash; Jun 2025)</td></tr>
+                <tr><td><a href="https://data.cms.gov/provider-data/dataset/284v-j9fz" target="_blank" rel="noopener noreferrer">FY 2026 SNF VBP</a></td><td>FY 2024 risk-standardized 30-day readmission rate</td></tr>
+              </tbody>
+            </table>
+
+            <h3>County View</h3>
+            <table>
+              <thead><tr><th>Dataset</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td>Census ZCTA-to-County Crosswalk (2020)</td><td>Maps facility ZIP codes to county FIPS codes by population overlap</td></tr>
+                <tr><td>MSSP ACO Beneficiary County Assignments (2024)</td><td>ACO ID, county, and assigned beneficiary counts</td></tr>
+                <tr><td>NBER SSA-to-FIPS Crosswalk (2025)</td><td>Translates SSA county codes to FIPS codes</td></tr>
+                <tr><td>CMS ACO Participants API</td><td>ACO ID to ACO name lookup (474 ACOs)</td></tr>
+                <tr><td>MSSP ACO Performance PUF (PY 2024)</td><td>SNF admissions per 1,000 beneficiaries and average length of stay</td></tr>
+              </tbody>
+            </table>
+
+            <h3>Rate Definitions</h3>
+            <ul>
+              <li><strong>Observed Rate</strong> &mdash; Raw % of short-stay residents rehospitalized within 30 days (CMS Measure 521)</li>
+              <li><strong>Adjusted Rate</strong> &mdash; Risk-adjusted % used in CMS Five-Star rating</li>
+              <li><strong>VBP Rate</strong> &mdash; FY 2024 risk-standardized 30-day readmission rate from SNF Value-Based Purchasing program</li>
+            </ul>
+
+            <h3>Color Scale (Facility View)</h3>
+            <p>Colors are based on national percentile rank. Percentiles are computed over all 12,000+ facilities so colors remain comparable when filtering by state or ACO. Green = low rates (p20), yellow = median, red = high rates (p80). Gray = no data.</p>
+
+            <h3>County Market Segmentation</h3>
+            <p>Counties are categorized by ACO presence and rehospitalization rate relative to the national 75th percentile:</p>
+            <ul>
+              <li><strong style={{color:'#e63946'}}>Accountability Gap</strong> &mdash; ACO present + high rate. Intervention opportunity.</li>
+              <li><strong style={{color:'#f4a261'}}>Greenfield Market</strong> &mdash; No ACO + high rate. New market opportunity.</li>
+              <li><strong style={{color:'#2a9d8f'}}>Benchmark</strong> &mdash; ACO present + low rate. Model market.</li>
+              <li><strong style={{color:'#9ca3af'}}>Neutral</strong> &mdash; No ACO + acceptable rate.</li>
+            </ul>
+
+            <h3>Coverage</h3>
+            <p>12,068 facilities &middot; ~11,944 with observed/adjusted rates &middot; ~10,228 with VBP rate &middot; 2,386 counties &middot; 474 unique ACOs mapped.</p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
