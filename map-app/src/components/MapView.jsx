@@ -59,14 +59,14 @@ function fmt(val) {
  * Flies the map to the bounding box of visible facilities whenever the state
  * filter changes.  On initial mount (selectedState === 'ALL') it stays put.
  */
-function BoundsUpdater({ facilities, selectedState }) {
+function BoundsUpdater({ facilities, selectedState, selectedACO }) {
   const map     = useMap()
   const mounted = useRef(false)
 
   useEffect(() => {
     if (!mounted.current) { mounted.current = true; return }
 
-    if (selectedState === 'ALL') {
+    if (selectedState === 'ALL' && selectedACO === 'ALL') {
       map.flyTo([39.5, -98.35], 4, { duration: 0.6 })
       return
     }
@@ -74,7 +74,7 @@ function BoundsUpdater({ facilities, selectedState }) {
 
     const bounds = L.latLngBounds(facilities.map(f => [f.lat, f.lng]))
     map.flyToBounds(bounds, { padding: [52, 52], maxZoom: 9, duration: 0.7 })
-  }, [selectedState]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedState, selectedACO]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return null
 }
@@ -83,7 +83,7 @@ function BoundsUpdater({ facilities, selectedState }) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function MapView({
-  facilities, colorMetric, colorRange, selectedState,
+  facilities, colorMetric, colorRange, selectedState, selectedACO,
   viewMode, countyData, topoData,
 }) {
   const sortedRates = colorRange
@@ -105,7 +105,7 @@ export default function MapView({
           maxZoom={19}
         />
 
-        <BoundsUpdater facilities={facilities} selectedState={selectedState} />
+        <BoundsUpdater facilities={facilities} selectedState={selectedState} selectedACO={selectedACO} />
 
         {viewMode === 'facility' && facilities.map(f => {
           const rate  = getDisplayRate(f, colorMetric)

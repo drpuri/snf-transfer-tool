@@ -401,6 +401,20 @@ def main():
     print("\n  Category breakdown:")
     for cat, count in cats.items():
         print(f"    {cat}: {count:,}")
+
+    # ── Enrich facilities.json with county_fips ───────────────────────────────
+    print("\n  Enriching facilities.json with county_fips …")
+    ccn_to_fips = fac_df.set_index("id")["fips"].dropna().to_dict()
+    enriched = 0
+    for fac in facilities:
+        cfips = ccn_to_fips.get(fac["id"])
+        if cfips:
+            fac["county_fips"] = cfips
+            enriched += 1
+        else:
+            fac["county_fips"] = None
+    FACILITIES_JSON.write_text(json.dumps(facilities, indent=2), encoding="utf-8")
+    print(f"  {enriched:,} of {len(facilities):,} facilities tagged with county_fips.")
     print()
 
 

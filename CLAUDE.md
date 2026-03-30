@@ -44,6 +44,7 @@ All data comes from the [CMS Provider Data Catalog](https://data.cms.gov/provide
 | `rehospitalization_rate_observed` | Raw % of short-stay residents rehospitalized (Measure 521, period 07/2024–06/2025) |
 | `rehospitalization_rate_adjusted` | Risk-adjusted % used in CMS Five-Star rating |
 | `readmission_rate_vbp` | FY 2024 risk-standardized 30-day readmission rate from SNF VBP program (converted from decimal to %) |
+| `county_fips` | 5-digit FIPS county code (added by `fetch_county_data.py` or `enrich_county_fips.py`; used for ACO filtering in facility view) |
 
 ### County Fields in `county_data.json`
 
@@ -83,7 +84,8 @@ Counties are categorized based on ACO presence and rehospitalization rate relati
 ```
 snf-transfer-tool/
 ├── fetch_snf_data.py          # Python ETL — downloads CMS data → facilities.json
-├── fetch_county_data.py       # Python ETL — aggregates by county + ACO data → county_data.json
+├── fetch_county_data.py       # Python ETL — aggregates by county + ACO data → county_data.json + enriches facilities.json with county_fips
+├── enrich_county_fips.py      # Standalone script — adds county_fips to facilities.json via CMS API + Census ZCTA crosswalk (fallback when CSV URLs expire)
 ├── requirements.txt           # Python deps: pandas>=2.0, requests>=2.31
 ├── facilities.json            # Generated output (12,068 facilities, ~3.6 MB)
 ├── county_data.json           # Generated output (2,386 counties, ~2.5 MB)
@@ -132,6 +134,7 @@ snf-transfer-tool/
 7. Downloads MSSP ACO Performance PUF (PY 2024) to get per-ACO SNF admissions (`P_SNF_ADM`) and avg length of stay (`SNF_LOS`)
 8. Produces per-county `acos` array with ACO name, ID, beneficiary count, SNF admissions per 1k, and avg LOS (0-bene entries filtered out)
 9. Categorizes each county into market segment based on ACO presence + rate vs 75th percentile
+10. Writes `county_fips` back into `facilities.json` for facility-level ACO filtering
 - Accepts `--output` CLI flag
 
 ### React App (`map-app/`)
@@ -151,9 +154,9 @@ snf-transfer-tool/
 
 **County popups** — show avg rate, facility count, category, and a list of each ACO by name with SNF admissions per 1k, avg LOS, and beneficiary count
 
-**ACO filter** — dropdown in header (county mode only) filters to counties where the selected ACO operates; combines with state filter
+**ACO filter** — dropdown in header (both views) filters facilities/counties to those where the selected ACO operates; combines with state filter. In facility view, uses `county_fips` on each facility to look up which ACOs serve that county.
 
-**Lazy loading** — county data (`county_data.json`) and TopoJSON are fetched only when county view is first selected
+**Lazy loading** — TopoJSON is fetched only when county view is first selected; county data is loaded eagerly at startup (needed for ACO list in both views)
 
 **Performance** — `MapContainer` uses `preferCanvas` (Canvas renderer) to handle 12,000+ simultaneous markers without lag.
 

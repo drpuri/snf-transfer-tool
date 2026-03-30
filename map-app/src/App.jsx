@@ -14,29 +14,25 @@ export default function App() {
   const [topoData, setTopoData]           = useState(null)
   const [selectedACO, setSelectedACO]     = useState('ALL')
 
+  // Load facilities and county data together on startup
   useEffect(() => {
-    fetch('./facilities.json')
-      .then(r => r.json())
-      .then(data => { setFacilities(data); setLoading(false) })
-      .catch(() => setLoading(false))
+    Promise.all([
+      fetch('./facilities.json').then(r => r.json()),
+      fetch('./county_data.json').then(r => r.json()),
+    ]).then(([fac, cd]) => {
+      setFacilities(fac)
+      setCountyData(cd)
+      setLoading(false)
+    }).catch(() => setLoading(false))
   }, [])
 
-  // Load county data and TopoJSON lazily when county view is first selected
+  // Load TopoJSON lazily when county view is first selected
   useEffect(() => {
     if (viewMode !== 'county') return
-    if (countyData.length > 0 && topoData) return
-
-    Promise.all([
-      countyData.length === 0
-        ? fetch('./county_data.json').then(r => r.json())
-        : Promise.resolve(null),
-      !topoData
-        ? fetch(TOPO_URL).then(r => r.json())
-        : Promise.resolve(null),
-    ]).then(([cd, td]) => {
-      if (cd) setCountyData(cd)
-      if (td) setTopoData(td)
-    }).catch(err => console.error('Failed to load county/topo data:', err))
+    if (topoData) return
+    fetch(TOPO_URL).then(r => r.json())
+      .then(td => setTopoData(td))
+      .catch(err => console.error('Failed to load topo data:', err))
   }, [viewMode]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sorted list of states present in the data
@@ -58,6 +54,18 @@ export default function App() {
     return ['ALL', ...[...set].sort()]
   }, [countyData])
 
+  // Map county FIPS → Set of ACO names (for facility-level ACO filtering)
+  const fipsToAcoNames = useMemo(() => {
+    const map = {}
+    for (const c of countyData) {
+      if (c.acos) for (const a of c.acos) {
+        if (!map[c.fips]) map[c.fips] = new Set()
+        if (a.name) map[c.fips].add(a.name)
+      }
+    }
+    return map
+  }, [countyData])
+
   // County data filtered by selected ACO
   const filteredCountyData = useMemo(() => {
     if (selectedACO === 'ALL') return countyData
@@ -66,13 +74,19 @@ export default function App() {
     )
   }, [countyData, selectedACO])
 
-  // Facilities visible on map after state filter
-  const filtered = useMemo(
-    () => selectedState === 'ALL'
+  // Facilities visible on map after state + ACO filter
+  const filtered = useMemo(() => {
+    let result = selectedState === 'ALL'
       ? facilities
-      : facilities.filter(f => f.state === selectedState),
-    [facilities, selectedState]
-  )
+      : facilities.filter(f => f.state === selectedState)
+    if (selectedACO !== 'ALL') {
+      result = result.filter(f => {
+        const names = fipsToAcoNames[f.county_fips]
+        return names && names.has(selectedACO)
+      })
+    }
+    return result
+  }, [facilities, selectedState, selectedACO, fipsToAcoNames])
 
   // Globally sorted rate array — computed over ALL facilities so percentile
   // colours are nationally consistent even when a state filter is active.
@@ -132,7 +146,7 @@ export default function App() {
             ))}
           </select>
 
-          {viewMode === 'county' && (
+          {acoList.length > 1 && (
             <>
               <div className="header-divider" />
 
@@ -187,6 +201,7 @@ export default function App() {
             colorMetric={colorMetric}
             colorRange={colorRange}
             selectedState={selectedState}
+            selectedACO={selectedACO}
             viewMode={viewMode}
             countyData={filteredCountyData}
             topoData={topoData}
