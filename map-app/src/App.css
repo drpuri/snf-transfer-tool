@@ -336,3 +336,174 @@
 .readme-close:hover {
   color: #374151;
 }
+
+/* ── Panel views (Hotspot, Scorecard, Spending) ──────────────────────────── */
+.panel-view {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.5rem;
+  background: #f9fafb;
+  min-height: 0;
+}
+
+.panel-prompt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #9ca3af;
+  font-size: 1rem;
+}
+
+.panel-table-wrap {
+  overflow-x: auto;
+}
+
+.panel-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.panel-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.panel-table th {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  background: #f3f4f6;
+  color: #374151;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.panel-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.panel-table th.sortable:hover {
+  background: #e5e7eb;
+}
+
+.panel-table td {
+  padding: 0.4375rem 0.75rem;
+  border-bottom: 1px solid #f3f4f6;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.panel-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.panel-table tbody tr.row-selected {
+  background: #eff6ff;
+  font-weight: 500;
+}
+
+.cell-rank {
+  color: #9ca3af;
+  font-size: 0.75rem;
+  width: 40px;
+}
+
+.cell-name {
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.cell-empty {
+  text-align: center;
+  color: #9ca3af;
+  padding: 2rem !important;
+}
+
+/* ── Rate badge ──────────────────────────────────────────────────────────── */
+.rate-badge {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+/* ── Star ratings ────────────────────────────────────────────────────────── */
+.stars {
+  font-size: 0.875rem;
+  letter-spacing: 1px;
+}
+
+.star-filled {
+  color: #f59e0b;
+}
+
+.star-empty {
+  color: #e5e7eb;
+}
+
+.stars-na {
+  color: #9ca3af;
+}
+
+/* ── Spending view ───────────────────────────────────────────────────────── */
+.spending-view .spending-chart-wrap {
+  background: #fff;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.spending-chart-legend {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  font-size: 0.6875rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+.spending-tooltip {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  font-size: 0.75rem;
+}
+
+.spending-tooltip-name {
+  font-weight: 600;
+  margin: 0 0 0.25rem;
+  color: #111827;
+  font-size: 0.8125rem;
+}
+
+.spending-tooltip table {
+  border-collapse: collapse;
+}
+
+.spending-tooltip td {
+  padding: 0.125rem 0.5rem 0.125rem 0;
+  color: #374151;
+}
+
+.spending-tooltip td:first-child {
+  color: #6b7280;
+}

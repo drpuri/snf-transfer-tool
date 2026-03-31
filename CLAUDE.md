@@ -6,7 +6,9 @@ A multi-part pipeline for visualizing CMS Nursing Home rehospitalization and rea
 
 1. **`fetch_snf_data.py`** — Python script that downloads three CMS datasets, joins them on CMS Certification Number (CCN), and outputs `facilities.json`.
 2. **`fetch_county_data.py`** — Python script that aggregates facility rates by county, merges MSSP ACO beneficiary data with ACO name lookups, and categorizes counties into strategic market segments → `county_data.json`.
-3. **`map-app/`** — React + Leaflet + Vite static web app with two views: a facility-level choropleth map and a county-level ACO segmentation map with filtering.
+3. **`enrich_facilities_quality.py`** — Adds star ratings, staffing hours, deficiencies, and other quality fields to `facilities.json` via CMS Provider Data API.
+4. **`fetch_aco_data.py`** — Extracts per-ACO spending, utilization, and quality metrics from the MSSP Performance PUF → `aco_data.json`.
+5. **`map-app/`** — React + Leaflet + Recharts + Vite static web app with five views: facility map, county ACO segmentation map, readmission hotspot drill-down, SNF scorecard, and post-acute spending benchmarks.
 
 **Live URL:** https://snf-transfer-tool-uhu2.vercel.app
 **GitHub:** https://github.com/drpuri/snf-transfer-tool
@@ -45,6 +47,17 @@ All data comes from the [CMS Provider Data Catalog](https://data.cms.gov/provide
 | `rehospitalization_rate_adjusted` | Risk-adjusted % used in CMS Five-Star rating |
 | `readmission_rate_vbp` | FY 2024 risk-standardized 30-day readmission rate from SNF VBP program (converted from decimal to %) |
 | `county_fips` | 5-digit FIPS county code (added by `fetch_county_data.py` or `enrich_county_fips.py`; used for ACO filtering in facility view) |
+| `overall_rating` | CMS Five-Star overall rating (1-5 or null) |
+| `health_inspection_rating` | Health inspection star rating (1-5 or null) |
+| `staffing_rating` | Staffing star rating (1-5 or null) |
+| `qm_rating` | Quality measure star rating (1-5 or null) |
+| `rn_hours` | Reported RN staffing hours per resident per day (float or null) |
+| `total_nurse_hours` | Reported total nurse staffing hours per resident per day (float or null) |
+| `beds` | Number of certified beds (int or null) |
+| `avg_residents` | Average number of residents per day (float or null) |
+| `total_deficiencies` | Rating cycle 1 total health deficiencies (int or null) |
+| `penalties` | Total number of penalties (int or null) |
+| `ownership_type` | Ownership type string (e.g., "For profit - Corporation") or null |
 
 ### County Fields in `county_data.json`
 
@@ -60,7 +73,27 @@ All data comes from the [CMS Provider Data Catalog](https://data.cms.gov/provide
 | `acos` | Array of `{id, name, beneficiaries, snf_adm, snf_los}` for each ACO with >0 beneficiaries |
 | `category` | Market segmentation category (see below) |
 
-Coverage (January 2026 data): 12,068 facilities total; ~11,944 with observed/adjusted rates; ~10,228 with VBP rate; 2,386 counties with SNF data; 474 unique ACOs mapped.
+### ACO Fields in `aco_data.json`
+
+| Field | Description |
+|-------|-------------|
+| `id` | ACO identifier (e.g., "A1001") |
+| `name` | ACO name |
+| `beneficiaries` | Total assigned beneficiaries |
+| `total_spending_per_cap` | Total per capita expenditure ($) |
+| `snf_spending_per_cap` | Per capita SNF spending ($) |
+| `hha_spending_per_cap` | Per capita home health spending ($) |
+| `inpatient_spending_per_cap` | Per capita inpatient spending ($) |
+| `snf_adm` | SNF admissions per 1,000 beneficiary person-years |
+| `snf_los` | Average SNF length of stay (days) |
+| `snf_pay_per_stay` | SNF payment per stay ($) |
+| `ed_visits` | ED visits per 1,000 |
+| `all_cause_adm` | All-cause admissions per 1,000 |
+| `readmission_rate` | ACO-level readmission rate (decimal, e.g., 0.16) |
+| `quality_score` | Quality score 0-100 |
+| `savings_rate` | Savings rate (%) |
+
+Coverage (January 2026 data): 12,068 facilities total; ~11,944 with observed/adjusted rates; ~10,228 with VBP rate; 2,386 counties with SNF data; 476 unique ACOs mapped.
 
 **Note on ACO SNF metrics:** `snf_adm` is SNF admissions per 1,000 beneficiary person-years from `P_SNF_ADM`. `snf_los` is average SNF length of stay in days from `SNF_LOS`. Both come from the MSSP Performance PUF and may be `null` if CMS suppressed the value.
 
@@ -86,9 +119,12 @@ snf-transfer-tool/
 ├── fetch_snf_data.py          # Python ETL — downloads CMS data → facilities.json
 ├── fetch_county_data.py       # Python ETL — aggregates by county + ACO data → county_data.json + enriches facilities.json with county_fips
 ├── enrich_county_fips.py      # Standalone script — adds county_fips to facilities.json via CMS API + Census ZCTA crosswalk (fallback when CSV URLs expire)
+├── enrich_facilities_quality.py # Adds star ratings, staffing, deficiencies to facilities.json via CMS API
+├── fetch_aco_data.py          # Extracts ACO spending/utilization from MSSP Performance PUF → aco_data.json
 ├── requirements.txt           # Python deps: pandas>=2.0, requests>=2.31
-├── facilities.json            # Generated output (12,068 facilities, ~3.6 MB)
+├── facilities.json            # Generated output (12,068 facilities, ~5 MB with quality fields)
 ├── county_data.json           # Generated output (2,386 counties, ~2.5 MB)
+├── aco_data.json              # Generated output (476 ACOs, ~100 KB)
 ├── vercel.json                # Vercel build config (buildCommand, outputDirectory)
 ├── .gitignore
 ├── CLAUDE.md                  # This file
@@ -96,18 +132,22 @@ snf-transfer-tool/
 └── map-app/                   # React + Vite frontend
     ├── public/
     │   ├── facilities.json    # Copy of root facilities.json, served statically
-    │   └── county_data.json   # Copy of root county_data.json, served statically
+    │   ├── county_data.json   # Copy of root county_data.json, served statically
+    │   └── aco_data.json      # Copy of root aco_data.json, served statically
     ├── src/
     │   ├── main.jsx           # Entry point — imports Leaflet CSS before app CSS
-    │   ├── App.jsx            # Root component: view toggle, state filter, ACO filter, metric toggle
-    │   ├── App.css            # Layout, header, toggle group, legend, ACO select styles
+    │   ├── App.jsx            # Root component: 5-way view toggle, state filter, ACO filter, metric toggle
+    │   ├── App.css            # Layout, header, toggle group, legend, panel/table styles
     │   ├── index.css          # CSS reset + Leaflet popup overrides
     │   └── components/
     │       ├── MapView.jsx    # Facility map: CircleMarkers, BoundsUpdater, Legend
-    │       └── CountyView.jsx # County map: GeoJSON choropleth, popups with ACO list, CountyLegend
+    │       ├── CountyView.jsx # County map: GeoJSON choropleth, popups with ACO list, CountyLegend
+    │       ├── HotspotView.jsx    # Readmission hotspot drill-down: ranked county table for selected ACO
+    │       ├── ScorecardView.jsx  # SNF scorecard: sortable facility quality table with star ratings
+    │       └── SpendingView.jsx   # Post-acute spending: scatter plot + sortable ACO table (recharts)
     ├── index.html
     ├── vite.config.js
-    └── package.json           # Dependencies: react-leaflet, leaflet, topojson-client
+    └── package.json           # Dependencies: react-leaflet, leaflet, topojson-client, recharts
 ```
 
 ---
@@ -137,11 +177,27 @@ snf-transfer-tool/
 10. Writes `county_fips` back into `facilities.json` for facility-level ACO filtering
 - Accepts `--output` CLI flag
 
+### Python ETL — Facility Quality Enrichment (`enrich_facilities_quality.py`)
+
+- Fetches star ratings, staffing hours, deficiencies, beds, ownership from CMS Provider Data API (`4pq5-n9py`)
+- Paginated API calls (page_size=500), matches by CCN
+- Writes quality fields directly into `facilities.json`
+
+### Python ETL — ACO Data (`fetch_aco_data.py`)
+
+- Downloads MSSP Performance PUF (same source as `fetch_county_data.py`)
+- Extracts 15 fields per ACO: spending, utilization, quality, and savings metrics
+- Suppressed values (`*`, `.`, empty) → null
+- Outputs `aco_data.json` (~476 ACOs)
+
 ### React App (`map-app/`)
 
-**View modes** — Facility/County toggle in the header:
+**View modes** — 5-way toggle in the header: Facility | County | Hotspots | Scorecard | Spending
 - **Facility view:** CircleMarker per facility, color-coded by percentile, with metric toggle (Observed / VBP)
 - **County view:** GeoJSON choropleth from TopoJSON (`us-atlas@3`), colored by market category, with ACO filter dropdown
+- **Hotspot view:** Ranked table of counties for selected ACO, sorted by avg rehospitalization rate (worst first). Shows ACO-specific beneficiaries, SNF admissions, and LOS.
+- **Scorecard view:** Sortable table of SNF facilities in selected ACO's counties. Displays star ratings, staffing hours, deficiencies, and readmission rates with color-coded badges.
+- **Spending view:** Scatter plot (SNF $/cap vs SNF admissions/1k, dot size=beneficiaries, color=quality score) + sortable table of all ACOs. Selected ACO highlighted. Uses recharts.
 
 **Color scale (facility view)** — percentile-based, nationally consistent:
 - `colorRange` in `App.jsx` is a sorted array of rates computed over *all* facilities (not just the state-filtered subset), so colors remain comparable when drilling into a single state
@@ -156,13 +212,15 @@ snf-transfer-tool/
 
 **ACO filter** — dropdown in header (both views) filters facilities/counties to those where the selected ACO operates; combines with state filter. In facility view, uses `county_fips` on each facility to look up which ACOs serve that county.
 
-**Lazy loading** — TopoJSON is fetched only when county view is first selected; county data is loaded eagerly at startup (needed for ACO list in both views)
+**Lazy loading** — TopoJSON is fetched only when county view is first selected; county data and ACO data are loaded eagerly at startup (needed for ACO list and spending view)
 
 **Performance** — `MapContainer` uses `preferCanvas` (Canvas renderer) to handle 12,000+ simultaneous markers without lag.
 
 **State filter** — `BoundsUpdater` component flies the map to the bounding box of filtered facilities; flies back to CONUS center when "All States" is selected.
 
 **Metric toggle** — (facility view only) switches color scale and legend between `rehospitalization_rate_observed` (with VBP fallback) and `readmission_rate_vbp` (with observed fallback).
+
+**Conditional controls** — Hotspot + Scorecard views require ACO selection. Spending view hides state/ACO filters (shows all ACOs, with selected ACO highlighted). Facility view shows metric toggle. County view shows all current controls.
 
 ---
 
@@ -175,19 +233,22 @@ CMS releases updated nursing home data monthly. To refresh:
    - https://data.cms.gov/provider-data/dataset/ijh5-nb2v
    - https://data.cms.gov/provider-data/dataset/284v-j9fz
 2. Update the URL constants at the top of `fetch_snf_data.py` (or pass via CLI flags)
-3. Run both scripts:
+3. Run all scripts:
    ```bash
    python3 fetch_snf_data.py
    python3 fetch_county_data.py
+   python3 enrich_facilities_quality.py
+   python3 fetch_aco_data.py
    ```
 4. Copy outputs to the app's public directory:
    ```bash
    cp facilities.json map-app/public/facilities.json
    cp county_data.json map-app/public/county_data.json
+   cp aco_data.json map-app/public/aco_data.json
    ```
 5. Commit and push — Vercel will auto-redeploy:
    ```bash
-   git add facilities.json county_data.json map-app/public/facilities.json map-app/public/county_data.json
+   git add facilities.json county_data.json aco_data.json map-app/public/facilities.json map-app/public/county_data.json map-app/public/aco_data.json
    git commit -m "Update CMS data — <Month Year>"
    git push
    ```
@@ -199,12 +260,15 @@ CMS releases updated nursing home data monthly. To refresh:
 ```bash
 # Python scripts
 python3 -m pip install -r requirements.txt
-python3 fetch_snf_data.py        # → facilities.json
-python3 fetch_county_data.py     # → county_data.json (requires facilities.json)
+python3 fetch_snf_data.py              # → facilities.json
+python3 fetch_county_data.py           # → county_data.json (requires facilities.json)
+python3 enrich_facilities_quality.py   # → enriches facilities.json with quality fields
+python3 fetch_aco_data.py              # → aco_data.json
 
 # Copy data to frontend
 cp facilities.json map-app/public/
 cp county_data.json map-app/public/
+cp aco_data.json map-app/public/
 
 # React app
 cd map-app

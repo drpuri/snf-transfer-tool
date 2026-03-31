@@ -1,8 +1,28 @@
 import { useState, useEffect, useMemo } from 'react'
 import MapView from './components/MapView'
+import HotspotView from './components/HotspotView'
+import ScorecardView from './components/ScorecardView'
+import SpendingView from './components/SpendingView'
 import './App.css'
 
 const TOPO_URL = 'https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json'
+
+const VIEW_MODES = [
+  { key: 'facility',  label: 'Facility' },
+  { key: 'county',    label: 'County' },
+  { key: 'hotspot',   label: 'Hotspots' },
+  { key: 'scorecard', label: 'Scorecard' },
+  { key: 'spending',  label: 'Spending' },
+]
+
+// Views that render the map
+const MAP_VIEWS = new Set(['facility', 'county'])
+// Views that require ACO selection
+const ACO_REQUIRED_VIEWS = new Set(['hotspot', 'scorecard'])
+// Views that show the state filter
+const STATE_FILTER_VIEWS = new Set(['facility', 'county', 'hotspot', 'scorecard'])
+// Views that show the ACO filter
+const ACO_FILTER_VIEWS = new Set(['facility', 'county', 'hotspot', 'scorecard'])
 
 export default function App() {
   const [facilities, setFacilities] = useState([])
@@ -14,15 +34,18 @@ export default function App() {
   const [topoData, setTopoData]           = useState(null)
   const [selectedACO, setSelectedACO]     = useState('ALL')
   const [showReadme, setShowReadme]       = useState(false)
+  const [acoData, setAcoData]             = useState([])
 
-  // Load facilities and county data together on startup
+  // Load facilities, county data, and ACO data together on startup
   useEffect(() => {
     Promise.all([
       fetch('./facilities.json').then(r => r.json()),
       fetch('./county_data.json').then(r => r.json()),
-    ]).then(([fac, cd]) => {
+      fetch('./aco_data.json').then(r => r.json()),
+    ]).then(([fac, cd, ad]) => {
       setFacilities(fac)
       setCountyData(cd)
+      setAcoData(ad)
       setLoading(false)
     }).catch(() => setLoading(false))
   }, [])
@@ -109,11 +132,40 @@ export default function App() {
     return values.sort((a, b) => a - b)   // ascending; used for binary-search percentile lookup
   }, [facilities, colorMetric])
 
-  const displayCount = viewMode === 'county'
-    ? (selectedState === 'ALL'
-        ? filteredCountyData.length
-        : filteredCountyData.filter(c => c.state === selectedState).length)
-    : filtered.length
+  // Display count depends on view mode
+  const displayCount = useMemo(() => {
+    switch (viewMode) {
+      case 'county':
+        return selectedState === 'ALL'
+          ? filteredCountyData.length
+          : filteredCountyData.filter(c => c.state === selectedState).length
+      case 'hotspot': {
+        if (selectedACO === 'ALL') return 0
+        let counties = countyData.filter(c => c.acos && c.acos.some(a => a.name === selectedACO))
+        if (selectedState !== 'ALL') counties = counties.filter(c => c.state === selectedState)
+        return counties.length
+      }
+      case 'scorecard':
+        return filtered.length
+      case 'spending':
+        return acoData.length
+      default:
+        return filtered.length
+    }
+  }, [viewMode, filteredCountyData, filtered, countyData, acoData, selectedACO, selectedState])
+
+  const displayLabel = useMemo(() => {
+    switch (viewMode) {
+      case 'county': return 'counties'
+      case 'hotspot': return 'counties'
+      case 'spending': return 'ACOs'
+      default: return 'facilities'
+    }
+  }, [viewMode])
+
+  const showStateFilter = STATE_FILTER_VIEWS.has(viewMode)
+  const showACOFilter = ACO_FILTER_VIEWS.has(viewMode)
+  const showMetricToggle = viewMode === 'facility'
 
   return (
     <div className="app">
@@ -126,40 +178,38 @@ export default function App() {
         <div className="controls">
           <span className="control-label">View</span>
           <div className="toggle-group" role="group" aria-label="View mode">
-            <button
-              className={`toggle-btn${viewMode === 'facility' ? ' active' : ''}`}
-              onClick={() => setViewMode('facility')}
-              aria-pressed={viewMode === 'facility'}
-            >
-              Facility
-            </button>
-            <button
-              className={`toggle-btn${viewMode === 'county' ? ' active' : ''}`}
-              onClick={() => setViewMode('county')}
-              aria-pressed={viewMode === 'county'}
-            >
-              County
-            </button>
+            {VIEW_MODES.map(vm => (
+              <button
+                key={vm.key}
+                className={`toggle-btn${viewMode === vm.key ? ' active' : ''}`}
+                onClick={() => setViewMode(vm.key)}
+                aria-pressed={viewMode === vm.key}
+              >
+                {vm.label}
+              </button>
+            ))}
           </div>
 
-          <div className="header-divider" />
-
-          <label className="control-label" htmlFor="state-select">State</label>
-          <select
-            id="state-select"
-            className="state-select"
-            value={selectedState}
-            onChange={e => setSelectedState(e.target.value)}
-          >
-            {states.map(s => (
-              <option key={s} value={s}>{s === 'ALL' ? 'All States' : s}</option>
-            ))}
-          </select>
-
-          {acoList.length > 1 && (
+          {showStateFilter && (
             <>
               <div className="header-divider" />
+              <label className="control-label" htmlFor="state-select">State</label>
+              <select
+                id="state-select"
+                className="state-select"
+                value={selectedState}
+                onChange={e => setSelectedState(e.target.value)}
+              >
+                {states.map(s => (
+                  <option key={s} value={s}>{s === 'ALL' ? 'All States' : s}</option>
+                ))}
+              </select>
+            </>
+          )}
 
+          {showACOFilter && acoList.length > 1 && (
+            <>
+              <div className="header-divider" />
               <label className="control-label" htmlFor="aco-select">ACO</label>
               <select
                 id="aco-select"
@@ -174,10 +224,9 @@ export default function App() {
             </>
           )}
 
-          {viewMode === 'facility' && (
+          {showMetricToggle && (
             <>
               <div className="header-divider" />
-
               <span className="control-label">Color by</span>
               <div className="toggle-group" role="group" aria-label="Color metric">
                 <button
@@ -199,24 +248,45 @@ export default function App() {
           )}
 
           <span className="facility-count">
-            {displayCount.toLocaleString()} {viewMode === 'county' ? 'counties' : 'facilities'}
+            {displayCount.toLocaleString()} {displayLabel}
           </span>
         </div>
       </header>
 
       {loading
-        ? <div className="loading">Loading facility data…</div>
-        : <MapView
-            facilities={filtered}
-            colorMetric={colorMetric}
-            colorRange={colorRange}
-            selectedState={selectedState}
-            selectedACO={selectedACO}
-            viewMode={viewMode}
-            countyData={filteredCountyData}
-            topoData={topoData}
-            fipsToAcos={fipsToAcos}
-          />
+        ? <div className="loading">Loading data…</div>
+        : MAP_VIEWS.has(viewMode)
+          ? <MapView
+              facilities={filtered}
+              colorMetric={colorMetric}
+              colorRange={colorRange}
+              selectedState={selectedState}
+              selectedACO={selectedACO}
+              viewMode={viewMode}
+              countyData={filteredCountyData}
+              topoData={topoData}
+              fipsToAcos={fipsToAcos}
+            />
+          : viewMode === 'hotspot'
+            ? <HotspotView
+                countyData={countyData}
+                selectedACO={selectedACO}
+                selectedState={selectedState}
+              />
+            : viewMode === 'scorecard'
+              ? <ScorecardView
+                  facilities={facilities}
+                  selectedACO={selectedACO}
+                  selectedState={selectedState}
+                  countyData={countyData}
+                  fipsToAcoNames={fipsToAcoNames}
+                />
+              : viewMode === 'spending'
+                ? <SpendingView
+                    acoData={acoData}
+                    selectedACO={selectedACO}
+                  />
+                : null
       }
 
       {showReadme && (
@@ -270,7 +340,7 @@ export default function App() {
             </ul>
 
             <h3>Coverage</h3>
-            <p>12,068 facilities &middot; ~11,944 with observed/adjusted rates &middot; ~10,228 with VBP rate &middot; 2,386 counties &middot; 474 unique ACOs mapped.</p>
+            <p>12,068 facilities &middot; ~11,944 with observed/adjusted rates &middot; ~10,228 with VBP rate &middot; 2,386 counties &middot; 476 unique ACOs mapped.</p>
           </div>
         </div>
       )}
